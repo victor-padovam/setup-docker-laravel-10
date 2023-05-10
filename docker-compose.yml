@@ -1,8 +1,7 @@
 version: "3.7"
 
 services:
-    # image project
-    app:
+    sistema_gestao:
         build:
             context: .
             dockerfile: Dockerfile
@@ -10,13 +9,11 @@ services:
         working_dir: /var/www/
         volumes:
             - ./:/var/www
-        depends_on:
-            - redis
         networks:
-            - laravel
-
+            - sistema-getao-network
     # nginx
     nginx:
+        container_name: servidor-nginx
         image: nginx:alpine
         restart: unless-stopped
         ports:
@@ -25,43 +22,47 @@ services:
             - ./:/var/www
             - ./docker/nginx/:/etc/nginx/conf.d/
         networks:
-            - laravel
-
-    # db mysql
-    db:
+            - sistema-getao-network
+     # db mysql ${DB_DATABASE} //Busca do arquivo .env
+    mysql:
+        container_name: banco-mysql
         image: mysql:5.7.22
         restart: unless-stopped
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE:-laravel}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
-            MYSQL_PASSWORD: ${DB_PASSWORD:-userpass}
-            MYSQL_USER: ${DB_USERNAME:-username}
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
         volumes:
             - ./.docker/mysql/dbdata:/var/lib/mysql
         ports:
             - "3388:3306"
         networks:
-            - laravel
+            - sistema-getao-network
 
-    # queue
-    queue:
-        image: especializati/laravel9-app
-        restart: unless-stopped
-        command: "php artisan queue:work"
-        volumes:
-            - ./:/var/www
-        depends_on:
-            - redis
-            - app
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin
+        links:
+            - mysql
+        restart: always
+        environment:
+            - PMA_ARBITRARY=1
+        ports:
+            - 8899:80
         networks:
-            - laravel
-
-    # redis
-    redis:
-        image: redis:latest
-        networks:
-            - laravel
+            - sistema-getao-network
 
 networks:
-    laravel:
+    sistema-getao-network:
         driver: bridge
+
+#Doc. de utilizacao
+# para acessar phpmyadmin no navegador: http://localhost:8899/ -  e a porta
+# para acessar nginx(servidor) no navegador: http://localhost:8989/ - e a porta
+
+#PHPMYADMIN info no file
+# servidor: mysql
+# user: root
+# pass: root
+
